@@ -1,0 +1,1058 @@
+local Players          = game:GetService("Players")
+local TweenService     = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService       = game:GetService("RunService")
+local Workspace        = game:GetService("Workspace")
+
+local player    = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local camera    = Workspace.CurrentCamera
+
+local BANNER_ID = "rbxthumb://type=Asset&id=111941061849028&w=420&h=420"
+local INTRO_ID  = "rbxthumb://type=Asset&id=111941061849028&w=420&h=420"
+
+--------------------------------------------------------------------
+-- EXPLOIT DETECTION (only Silent Aim needs it)
+--------------------------------------------------------------------
+local IS_EXPLOIT = (typeof(hookmetamethod) == "function")
+
+--------------------------------------------------------------------
+-- HELPERS
+--------------------------------------------------------------------
+local function New(class, props, children)
+    local o = Instance.new(class)
+    for k,v in pairs(props) do o[k]=v end
+    for _,c in ipairs(children or {}) do c.Parent=o end
+    return o
+end
+local function Tween(o,t,p,s)
+    TweenService:Create(o,TweenInfo.new(t,s or Enum.EasingStyle.Quint,Enum.EasingDirection.Out),p):Play()
+end
+
+--------------------------------------------------------------------
+-- DRAGGABLE (mobile-safe) — defined early so key card can use it
+--------------------------------------------------------------------
+local function MakeDraggable(frame, handle)
+    local dragging = false
+    local dragStart, startPos
+    local activeTouch = nil
+
+    local function beginDrag(input)
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        if input.UserInputType == Enum.UserInputType.Touch then
+            activeTouch = input
+        end
+    end
+
+    local function endDrag()
+        dragging = false
+        activeTouch = nil
+    end
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            beginDrag(input)
+        end
+    end)
+
+    handle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            endDrag()
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+            if input.UserInputType == Enum.UserInputType.Touch
+            and activeTouch and input ~= activeTouch then
+                return
+            end
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    UserInputService.TouchEnded:Connect(function()
+        if dragging then endDrag() end
+    end)
+end
+
+--------------------------------------------------------------------
+-- KEY SYSTEM
+--------------------------------------------------------------------
+local VALID_KEY = "JOSH / KIE"
+
+local keyGui = New("ScreenGui", {
+    Name = "NoxinKey", ResetOnSpawn = false,
+    IgnoreGuiInset = true, DisplayOrder = 1000,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+})
+keyGui.Parent = playerGui
+
+local keyBlur = Instance.new("BlurEffect")
+keyBlur.Size = 0
+keyBlur.Parent = game:GetService("Lighting")
+TweenService:Create(keyBlur, TweenInfo.new(0.4), { Size = 18 }):Play()
+
+local keyBg = New("Frame", {
+    Size = UDim2.fromScale(1, 1),
+    BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+    BackgroundTransparency = 0.35, BorderSizePixel = 0,
+})
+keyBg.Parent = keyGui
+
+local keyCard = New("Frame", {
+    Size = UDim2.fromOffset(360, 400),
+    Position = UDim2.fromScale(0.5, 0.5),
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    BackgroundColor3 = Color3.fromRGB(14, 14, 18),
+    BorderSizePixel = 0,
+}, {
+    New("UICorner", { CornerRadius = UDim.new(0, 18) }),
+    New("UIStroke", { Color = Color3.fromRGB(70,70,80), Thickness = 2 }),
+})
+keyCard.Parent = keyGui
+MakeDraggable(keyCard, keyCard)
+
+-- Image at top
+local keyImageBox = New("Frame", {
+    Position = UDim2.new(0.5, 0, 0, 18),
+    Size = UDim2.fromOffset(110, 110),
+    AnchorPoint = Vector2.new(0.5, 0),
+    BackgroundColor3 = Color3.fromRGB(10, 10, 12),
+    BorderSizePixel = 0,
+}, {
+    New("UICorner", { CornerRadius = UDim.new(0, 16) }),
+    New("UIStroke", { Color = Color3.fromRGB(90, 90, 100), Thickness = 2 }),
+})
+keyImageBox.Parent = keyCard
+
+local keyImage = New("ImageLabel", {
+    Size = UDim2.new(1, -8, 1, -8),
+    Position = UDim2.fromOffset(4, 4),
+    BackgroundTransparency = 1,
+    Image = "rbxthumb://type=Asset&id=111941061849028&w=420&h=420",
+    ScaleType = Enum.ScaleType.Fit,
+}, { New("UICorner", { CornerRadius = UDim.new(0, 12) }) })
+keyImage.Parent = keyImageBox
+
+New("TextLabel", {
+    Text = "PLEASE ENTER THE KEY BOSS OMA",
+    Font = Enum.Font.GothamBlack, TextSize = 15,
+    TextColor3 = Color3.fromRGB(245,245,250),
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(0, 142),
+    Size = UDim2.new(1, -20, 0, 22),
+    TextWrapped = true,
+}).Parent = keyCard
+
+New("TextLabel", {
+    Text = "🔒  KEY REQUIRED",
+    Font = Enum.Font.GothamBold, TextSize = 11,
+    TextColor3 = Color3.fromRGB(150,150,160),
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(0, 168),
+    Size = UDim2.new(1, 0, 0, 16),
+}).Parent = keyCard
+
+local keyBox = New("TextBox", {
+    PlaceholderText = "Type your key...",
+    Font = Enum.Font.GothamMedium, TextSize = 14,
+    Text = "", TextColor3 = Color3.fromRGB(245,245,250),
+    PlaceholderColor3 = Color3.fromRGB(110,110,120),
+    BackgroundColor3 = Color3.fromRGB(20,20,24),
+    BorderSizePixel = 0, ClearTextOnFocus = false,
+    Position = UDim2.fromOffset(30, 200),
+    Size = UDim2.new(1, -60, 0, 42),
+    TextXAlignment = Enum.TextXAlignment.Center,
+}, {
+    New("UICorner", { CornerRadius = UDim.new(0, 10) }),
+    New("UIStroke", { Color = Color3.fromRGB(70,70,80), Thickness = 1 }),
+})
+keyBox.Parent = keyCard
+
+local keyStatus = New("TextLabel", {
+    Text = "",
+    Font = Enum.Font.GothamMedium, TextSize = 11,
+    TextColor3 = Color3.fromRGB(240, 80, 80),
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(0, 248),
+    Size = UDim2.new(1, 0, 0, 16),
+})
+keyStatus.Parent = keyCard
+
+local unlockBtn = New("TextButton", {
+    Text = "UNLOCK",
+    Font = Enum.Font.GothamBold, TextSize = 14,
+    TextColor3 = Color3.fromRGB(12,12,14),
+    BackgroundColor3 = Color3.fromRGB(255,255,255),
+    AutoButtonColor = false, BorderSizePixel = 0,
+    Position = UDim2.fromOffset(30, 278),
+    Size = UDim2.new(1, -60, 0, 44),
+}, {
+    New("UICorner", { CornerRadius = UDim.new(0, 10) }),
+})
+unlockBtn.Parent = keyCard
+
+unlockBtn.MouseEnter:Connect(function()
+    TweenService:Create(unlockBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(220,220,230) }):Play()
+end)
+unlockBtn.MouseLeave:Connect(function()
+    TweenService:Create(unlockBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(255,255,255) }):Play()
+end)
+
+local function Shake()
+    local original = keyCard.Position
+    local offsets = {12, -12, 10, -10, 6, -6, 0}
+    for _, off in ipairs(offsets) do
+        TweenService:Create(keyCard, TweenInfo.new(0.05), {
+            Position = UDim2.new(original.X.Scale, original.X.Offset + off, original.Y.Scale, original.Y.Offset)
+        }):Play()
+        task.wait(0.05)
+    end
+end
+
+local wrongTries = 0
+local locked = false
+local unlocked = false
+
+local function TryUnlock()
+    if locked or unlocked then return end
+    local input = keyBox.Text:gsub("^%s+", ""):gsub("%s+$", ""):upper()
+    local expected = VALID_KEY:upper()
+
+    if input == expected then
+        unlocked = true
+        keyStatus.Text = "✅ Access granted"
+        keyStatus.TextColor3 = Color3.fromRGB(80, 220, 120)
+        TweenService:Create(keyBlur, TweenInfo.new(0.4), { Size = 0 }):Play()
+        task.delay(0.5, function() if keyBlur then keyBlur:Destroy() end end)
+        task.wait(0.5)
+        keyGui:Destroy()
+        _G.__NoxinUnlocked = true
+    else
+        wrongTries = wrongTries + 1
+        keyStatus.Text = "❌ Invalid key ("..wrongTries.."/3)"
+        keyStatus.TextColor3 = Color3.fromRGB(240, 80, 80)
+        Shake()
+        keyBox.Text = ""
+        if wrongTries >= 3 then
+            locked = true
+            keyStatus.Text = "🚫 Too many attempts. Wait 5s..."
+            keyBox.TextEditable = false
+            task.wait(5)
+            wrongTries = 0
+            locked = false
+            keyBox.TextEditable = true
+            keyStatus.Text = ""
+        end
+    end
+end
+
+unlockBtn.MouseButton1Click:Connect(TryUnlock)
+keyBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then TryUnlock() end
+end)
+
+--------------------------------------------------------------------
+-- WAIT FOR KEY UNLOCK
+--------------------------------------------------------------------
+repeat task.wait(0.1) until _G.__NoxinUnlocked == true
+
+--------------------------------------------------------------------
+-- ACCENT COLOR SYSTEM
+--------------------------------------------------------------------
+local Accent = { Current = Color3.fromRGB(255,255,255), Target = Color3.fromRGB(255,255,255) }
+local AccentListeners = {}
+local function OnAccentChanged(fn) table.insert(AccentListeners, fn); fn(Accent.Current) end
+local function SetAccent(color) Accent.Target = color end
+
+RunService.RenderStepped:Connect(function(dt)
+    if Accent.Current ~= Accent.Target then
+        Accent.Current = Accent.Current:Lerp(Accent.Target, math.clamp(dt * 6, 0, 1))
+        for _, fn in ipairs(AccentListeners) do fn(Accent.Current) end
+    end
+end)
+
+--------------------------------------------------------------------
+-- THEME
+--------------------------------------------------------------------
+local THEME = {
+    Background = Color3.fromRGB(5, 5, 7),
+    Row        = Color3.fromRGB(14, 14, 18),
+    Stroke     = Color3.fromRGB(70, 70, 80),
+    Text       = Color3.fromRGB(245, 245, 250),
+    SubText    = Color3.fromRGB(150, 150, 160),
+    On         = Color3.fromRGB(255, 255, 255),
+    Off        = Color3.fromRGB(45, 45, 52),
+    Knob       = Color3.fromRGB(12, 12, 14),
+}
+
+local function Corner(r) return New("UICorner",{CornerRadius=UDim.new(0,r)}) end
+local function Stroke(c,t) return New("UIStroke",{Color=c,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border}) end
+
+--------------------------------------------------------------------
+-- SETTINGS BUS
+--------------------------------------------------------------------
+local Settings = {Values={}, Listeners={}}
+function Settings:Set(id, val)
+    self.Values[id] = val
+    for _, fn in ipairs(self.Listeners[id] or {}) do task.spawn(fn, val) end
+end
+function Settings:Get(id) return self.Values[id] == true end
+function Settings:Connect(id, fn)
+    self.Listeners[id] = self.Listeners[id] or {}
+    table.insert(self.Listeners[id], fn)
+    task.spawn(fn, self.Values[id])
+end
+
+for _, f in ipairs({
+    {id="GodMode"}, {id="Fly"}, {id="Noclip"}, {id="NoRecoil"},
+    {id="SilentAim"}, {id="Aimbot"}, {id="FOVCircle"}, {id="ESP"},
+}) do Settings:Set(f.id, false) end
+Settings:Set("TeamCheck", false)
+Settings:Set("WallCheck", false)
+
+local fovRadius     = 120
+local aimbotSmooth  = 0.25
+local aimBone       = "Head"
+local flySpeed      = 60
+
+--------------------------------------------------------------------
+-- INTRO
+--------------------------------------------------------------------
+local introGui = New("ScreenGui", { Name = "NoxinIntro", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 999, ZIndexBehavior = Enum.ZIndexBehavior.Sibling })
+introGui.Parent = playerGui
+local introBg = New("Frame", { Size = UDim2.fromScale(1,1), BackgroundColor3 = Color3.fromRGB(0,0,0), BackgroundTransparency = 1, BorderSizePixel = 0 })
+introBg.Parent = introGui
+local introImg = New("ImageLabel", { Size = UDim2.fromScale(1,1), Position = UDim2.fromScale(0,0), BackgroundTransparency = 1, Image = INTRO_ID, ImageTransparency = 1, ScaleType = Enum.ScaleType.Crop, ZIndex = 2 })
+introImg.Parent = introBg
+TweenService:Create(introBg, TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0 }):Play()
+TweenService:Create(introImg, TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { ImageTransparency = 0 }):Play()
+task.delay(3.5, function()
+    TweenService:Create(introBg, TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { BackgroundTransparency = 1 }):Play()
+    TweenService:Create(introImg, TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { ImageTransparency = 1 }):Play()
+    task.wait(1.5)
+    introGui:Destroy()
+end)
+
+--------------------------------------------------------------------
+-- SLIDER
+--------------------------------------------------------------------
+local function MakeSlider(parent, yPos, labelText, minV, maxV, defaultV, onChange)
+    New("TextLabel",{ Text=labelText, Font=Enum.Font.GothamMedium, TextSize=11, TextColor3=THEME.Text, BackgroundTransparency=1,
+        Position=UDim2.fromOffset(12,yPos), Size=UDim2.new(0.65,0,0,16), TextXAlignment=Enum.TextXAlignment.Left, ZIndex=5 }).Parent=parent
+    local valLbl=New("TextLabel",{ Text=tostring(defaultV), Font=Enum.Font.GothamMedium, TextSize=11, TextColor3=THEME.Text, BackgroundTransparency=1,
+        AnchorPoint=Vector2.new(1,0), Position=UDim2.new(1,-12,0,yPos), Size=UDim2.fromOffset(60,16), TextXAlignment=Enum.TextXAlignment.Right, ZIndex=5 })
+    valLbl.Parent=parent
+    local track=New("Frame",{ Position=UDim2.fromOffset(12,yPos+19), Size=UDim2.new(1,-24,0,6), BackgroundColor3=THEME.Off, BorderSizePixel=0, ZIndex=5 },{Corner(3)})
+    track.Parent=parent
+    local hitbox = New("TextButton", { Text="", BackgroundTransparency=1, BorderSizePixel=0,
+        Position=UDim2.fromOffset(0,-14), Size=UDim2.new(1,0,0,34), AutoButtonColor=false, ZIndex=8 })
+    hitbox.Parent=track
+    local ratio0=math.clamp((defaultV-minV)/(maxV-minV),0,1)
+    local fill=New("Frame",{Size=UDim2.fromScale(ratio0,1),BackgroundColor3=THEME.On,BorderSizePixel=0,ZIndex=6},{Corner(3)})
+    fill.Parent=track
+    OnAccentChanged(function(c) fill.BackgroundColor3 = c end)
+    local dragging=false
+    local function setRatio(r)
+        r=math.clamp(r,0,1)
+        local v=math.floor(minV+r*(maxV-minV))
+        valLbl.Text=tostring(v); fill.Size=UDim2.fromScale(r,1); onChange(v)
+    end
+    hitbox.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+            dragging=true
+            setRatio((i.Position.X-track.AbsolutePosition.X)/track.AbsoluteSize.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+            setRatio((i.Position.X-track.AbsolutePosition.X)/track.AbsoluteSize.X)
+        end
+    end)
+end
+
+--------------------------------------------------------------------
+-- GUI
+--------------------------------------------------------------------
+local gui=New("ScreenGui",{ Name="NoxinMenu", ResetOnSpawn=false, IgnoreGuiInset=true, ZIndexBehavior=Enum.ZIndexBehavior.Sibling })
+gui.Parent=playerGui
+
+local main=New("Frame",{
+    Size=UDim2.fromOffset(500,410), Position=UDim2.fromScale(0.5,0.5),
+    AnchorPoint=Vector2.new(0.5,0.5), BackgroundColor3=Color3.fromRGB(20,20,24),
+    BorderSizePixel=0, ClipsDescendants=true,
+},{Corner(20)})
+main.Parent=gui
+local uiScale = New("UIScale", { Scale = 1 }); uiScale.Parent = main
+
+local mainStroke = Stroke(THEME.Stroke, 2); mainStroke.Parent = main
+OnAccentChanged(function(c) mainStroke.Color = c end)
+
+local mainGrad = New("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255,255,255)),
+        ColorSequenceKeypoint.new(0.35, Color3.fromRGB(180,180,185)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(90,90,95)),
+        ColorSequenceKeypoint.new(0.65, Color3.fromRGB(40,40,45)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(0,0,0)),
+    }), Rotation = 45,
+})
+mainGrad.Parent = main
+RunService.RenderStepped:Connect(function(dt) mainGrad.Rotation = (mainGrad.Rotation + 8 * dt) % 360 end)
+
+local header=New("Frame",{Size=UDim2.new(1,0,0,88),BackgroundTransparency=1}); header.Parent=main
+local bannerBox = New("Frame", { Position = UDim2.fromOffset(14, 12), Size = UDim2.fromOffset(64, 64), BackgroundColor3 = Color3.fromRGB(15, 15, 18), BorderSizePixel = 0 }, { Corner(10) })
+bannerBox.Parent = header
+local bannerStroke = Stroke(THEME.Stroke,1); bannerStroke.Parent = bannerBox
+OnAccentChanged(function(c) bannerStroke.Color = c end)
+local bannerImg = New("ImageLabel", { Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), BackgroundTransparency = 1, Image = BANNER_ID, ScaleType = Enum.ScaleType.Fit, ZIndex = 2 }, { Corner(10) })
+bannerImg.Parent = bannerBox
+
+New("TextLabel",{ Text="JOSH / KIE OWN THIS", Font=Enum.Font.GothamBlack, TextSize=20, TextColor3=THEME.Text, BackgroundTransparency=1,
+    Position=UDim2.fromOffset(90,0), Size=UDim2.new(1,-160,1,0), TextXAlignment=Enum.TextXAlignment.Left }).Parent=header
+
+local function HBtn(text,xOff)
+    local b=New("TextButton",{ Text=text, Font=Enum.Font.GothamBold, TextSize=15, TextColor3=THEME.Text, BackgroundColor3=THEME.Row,
+        AutoButtonColor=false, Size=UDim2.fromOffset(28,28), AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,xOff,0.5,0) },{Corner(8),Stroke(THEME.Stroke,1)})
+    b.MouseEnter:Connect(function() Tween(b,0.15,{BackgroundColor3=Color3.fromRGB(32,32,38)}) end)
+    b.MouseLeave:Connect(function() Tween(b,0.15,{BackgroundColor3=THEME.Row}) end)
+    b.Parent=header; return b
+end
+local minBtn   = HBtn("–",-48)
+local closeBtn = HBtn("✕",-14)
+
+New("Frame",{ Size=UDim2.new(1,-40,0,1), Position=UDim2.fromOffset(20,88), BackgroundColor3=THEME.Stroke, BorderSizePixel=0 }).Parent=main
+MakeDraggable(main, header)
+
+local tabsBar = New("Frame", { Position = UDim2.fromOffset(0, 96), Size = UDim2.new(1, 0, 0, 30),
+    BackgroundColor3 = Color3.fromRGB(10,10,12), BackgroundTransparency = 0.2, BorderSizePixel = 0, ZIndex = 8 })
+tabsBar.Parent = main
+New("Frame", { Position = UDim2.fromOffset(0, 29), Size = UDim2.new(1,0,0,1), BackgroundColor3 = THEME.Stroke, BorderSizePixel = 0, ZIndex = 9 }).Parent = tabsBar
+
+local function TabButton(text, xOffset)
+    local b = New("TextButton", { Text = text, Font = Enum.Font.GothamBold, TextSize = 12,
+        TextColor3 = THEME.SubText, BackgroundTransparency = 1,
+        Size = UDim2.fromOffset(110, 30), Position = UDim2.fromOffset(xOffset, 0),
+        AutoButtonColor = false, ZIndex = 9 })
+    b.Parent = tabsBar; return b
+end
+local featuresTab = TabButton("FEATURES", 0)
+local settingsTab = TabButton("SETTINGS", 110)
+
+local contentHost = New("Frame", { Position = UDim2.fromOffset(0, 126), Size = UDim2.new(1, 0, 1, -126),
+    BackgroundTransparency = 1, ZIndex = 4 })
+contentHost.Parent = main
+
+local featuresPage = New("Frame", { Size = UDim2.fromScale(1,1), BackgroundTransparency = 1, Visible = true, ZIndex = 4 })
+featuresPage.Parent = contentHost
+local fList=New("ScrollingFrame",{ Position=UDim2.fromOffset(14,6), Size=UDim2.new(0,260,1,-12),
+    BackgroundTransparency=1, BorderSizePixel=0, ScrollBarThickness=3, ScrollBarImageColor3=THEME.Stroke,
+    CanvasSize=UDim2.new(), AutomaticCanvasSize=Enum.AutomaticSize.Y, ZIndex=4 },
+    {New("UIListLayout",{Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder})})
+fList.Parent=featuresPage
+local card=New("Frame",{ Position=UDim2.new(0,288,0,6), Size=UDim2.new(1,-302,1,-12),
+    BackgroundColor3=THEME.Background, BorderSizePixel=0, ZIndex=4 },{Corner(16),Stroke(THEME.Stroke,1)})
+card.Parent=featuresPage
+
+local settingsPage = New("Frame", { Size = UDim2.fromScale(1,1), BackgroundTransparency = 1, Visible = false, ZIndex = 4 })
+settingsPage.Parent = contentHost
+local settingsScroll = New("ScrollingFrame", { Position = UDim2.fromOffset(14, 6), Size = UDim2.new(1, -28, 1, -12),
+    BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = THEME.Stroke,
+    CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 4 },
+    { New("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }) })
+settingsScroll.Parent = settingsPage
+
+local function switchTab(which)
+    if which == "features" then
+        featuresPage.Visible = true; settingsPage.Visible = false
+        featuresTab.TextColor3 = Accent.Current; settingsTab.TextColor3 = THEME.SubText
+    else
+        featuresPage.Visible = false; settingsPage.Visible = true
+        featuresTab.TextColor3 = THEME.SubText; settingsTab.TextColor3 = Accent.Current
+    end
+end
+featuresTab.MouseButton1Click:Connect(function() switchTab("features") end)
+settingsTab.MouseButton1Click:Connect(function() switchTab("settings") end)
+switchTab("features")
+OnAccentChanged(function(c) if featuresPage.Visible then featuresTab.TextColor3 = c else settingsTab.TextColor3 = c end end)
+
+--------------------------------------------------------------------
+-- SETTINGS CONTENT
+--------------------------------------------------------------------
+local function SectionHeader(text, order)
+    New("TextLabel", { Text = "  "..text, Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = THEME.SubText,
+        BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left,
+        LayoutOrder = order or 0, ZIndex = 6 }).Parent = settingsScroll
+end
+
+SectionHeader("◈ CUSTOM COLOR", 1)
+local paletteColors = {
+    {name="Black", color=Color3.fromRGB(0,0,0)}, {name="White", color=Color3.fromRGB(255,255,255)},
+    {name="Blue", color=Color3.fromRGB(80,140,255)}, {name="Green", color=Color3.fromRGB(80,220,120)},
+    {name="Pink", color=Color3.fromRGB(255,110,200)}, {name="Red", color=Color3.fromRGB(240,60,60)},
+    {name="Yellow", color=Color3.fromRGB(255,215,80)}, {name="Gray", color=Color3.fromRGB(140,140,150)},
+}
+local paletteRow = New("Frame", { Size = UDim2.new(1, -10, 0, 60), BackgroundColor3 = THEME.Row, BorderSizePixel = 0,
+    LayoutOrder = 2, ZIndex = 5 }, { Corner(12), Stroke(THEME.Stroke, 1) })
+paletteRow.Parent = settingsScroll
+New("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0, 6), VerticalAlignment = Enum.VerticalAlignment.Center,
+    HorizontalAlignment = Enum.HorizontalAlignment.Center }).Parent = paletteRow
+
+for i, c in ipairs(paletteColors) do
+    local sw = New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(28, 28),
+        BackgroundColor3 = c.color, BorderSizePixel = 0, LayoutOrder = i, ZIndex = 6 }, { Corner(14) })
+    sw.Parent = paletteRow
+    sw.MouseButton1Click:Connect(function() SetAccent(c.color) end)
+    sw.MouseEnter:Connect(function() Tween(sw, 0.15, { Size = UDim2.fromOffset(32, 32) }) end)
+    sw.MouseLeave:Connect(function() Tween(sw, 0.15, { Size = UDim2.fromOffset(28, 28) }) end)
+end
+
+SectionHeader("◈ GUI SCALE", 3)
+local scaleRow = New("Frame", { Size = UDim2.new(1, -10, 0, 60), BackgroundColor3 = THEME.Row, BorderSizePixel = 0,
+    LayoutOrder = 4, ZIndex = 5 }, { Corner(12), Stroke(THEME.Stroke, 1) })
+scaleRow.Parent = settingsScroll
+MakeSlider(scaleRow, 10, "GUI Scale %", 50, 150, 100, function(v) uiScale.Scale = v / 100 end)
+
+SectionHeader("◈ LIVE PREVIEW", 5)
+local previewBar = New("Frame", { Size = UDim2.new(1, -10, 0, 36), BackgroundColor3 = Accent.Current,
+    BorderSizePixel = 0, LayoutOrder = 6, ZIndex = 5 }, { Corner(14) })
+previewBar.Parent = settingsScroll
+OnAccentChanged(function(c) previewBar.BackgroundColor3 = c end)
+New("TextLabel", { Text = "GUI ACCENT PREVIEW", Font = Enum.Font.GothamBold, TextSize = 12,
+    TextColor3 = Color3.fromRGB(20,20,20), BackgroundTransparency = 1, Size = UDim2.fromScale(1,1), ZIndex = 6 }).Parent = previewBar
+
+local infoBox = New("Frame", { Size = UDim2.new(1, -10, 0, 80), BackgroundColor3 = THEME.Row,
+    BorderSizePixel = 0, LayoutOrder = 7, ZIndex = 5 }, { Corner(12), Stroke(THEME.Stroke, 1) })
+infoBox.Parent = settingsScroll
+New("TextLabel", { Text = "Click a swatch to change accent.\nDrag header with finger to move.\nGUI Scale slider resizes the menu.",
+    Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = THEME.Text, BackgroundTransparency = 1,
+    Size = UDim2.new(1, -20, 1, -16), Position = UDim2.fromOffset(10, 8),
+    TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+    TextWrapped = true, ZIndex = 6 }).Parent = infoBox
+
+--------------------------------------------------------------------
+-- FEATURES TOGGLES
+--------------------------------------------------------------------
+local ToggleRefs = {}
+
+local function BuildToggle(feature, order)
+    local state=false
+    local row=New("TextButton",{ Text="", AutoButtonColor=false, LayoutOrder=order,
+        Size=UDim2.new(1,-6,0,42), BackgroundColor3=THEME.Row, BorderSizePixel=0, ZIndex=5 },
+        {Corner(12),Stroke(THEME.Stroke,1)})
+    New("TextLabel",{ Text=feature.name, Font=Enum.Font.GothamMedium, TextSize=13, TextColor3=THEME.Text, BackgroundTransparency=1,
+        Position=UDim2.fromOffset(12,5), Size=UDim2.new(0.6,0,0,16), TextXAlignment=Enum.TextXAlignment.Left, ZIndex=6 }).Parent=row
+    New("TextLabel",{ Text=feature.desc, Font=Enum.Font.Gotham, TextSize=9, TextColor3=THEME.SubText, BackgroundTransparency=1,
+        Position=UDim2.fromOffset(12,21), Size=UDim2.new(0.6,0,0,14), TextXAlignment=Enum.TextXAlignment.Left, ZIndex=6 }).Parent=row
+
+    local sLbl=New("TextLabel",{ Text="OFF", Font=Enum.Font.Gotham, TextSize=11, TextColor3=THEME.SubText, BackgroundTransparency=1,
+        AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-62,0.5,0), Size=UDim2.fromOffset(34,16),
+        TextXAlignment=Enum.TextXAlignment.Right, ZIndex=6 })
+    sLbl.Parent=row
+
+    local track=New("Frame",{ AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-10,0.5,0),
+        Size=UDim2.fromOffset(44,24), BackgroundColor3=THEME.Off, BorderSizePixel=0, ZIndex=6 },{Corner(12)})
+    local knob=New("Frame",{ AnchorPoint=Vector2.new(0,0.5), Position=UDim2.fromOffset(3,12),
+        Size=UDim2.fromOffset(18,18), BackgroundColor3=THEME.Knob, BorderSizePixel=0, ZIndex=7 },{Corner(9),Stroke(THEME.Stroke,1)})
+    knob.Parent=track; track.Parent=row
+
+    local function Render(anim)
+        local t=anim and 0.25 or 0
+        Tween(track,t,{BackgroundColor3=state and Accent.Current or THEME.Off})
+        Tween(knob,t,{Position=state and UDim2.fromOffset(23,12) or UDim2.fromOffset(3,12)},Enum.EasingStyle.Back)
+        sLbl.Text=state and "ON" or "OFF"
+        Tween(sLbl,t,{TextColor3=state and THEME.Text or THEME.SubText})
+    end
+    OnAccentChanged(function(c) if state then track.BackgroundColor3 = c end end)
+
+    row.MouseButton1Click:Connect(function()
+        state=not state; Render(true); Settings:Set(feature.id,state)
+    end)
+    row.MouseEnter:Connect(function() Tween(row,0.15,{BackgroundColor3=Color3.fromRGB(30,30,36)}) end)
+    row.MouseLeave:Connect(function() Tween(row,0.15,{BackgroundColor3=THEME.Row}) end)
+    Render(false)
+    row.Parent=fList
+    ToggleRefs[feature.id] = {Render=Render, SetState=function(v) if v~=state then state=v; Render(true) end end}
+end
+
+local FEATURES = {
+    {id="GodMode",   name="God Mode",      desc="UNLIMITED HEALTH"},
+    {id="Fly",       name="Fly",           desc="OPEN FLY PANEL"},
+    {id="Noclip",    name="Noclip",        desc="PHASE THROUGH WALLS"},
+    {id="NoRecoil",  name="No Recoil",     desc="REMOVE GUN KICK"},
+    {id="SilentAim", name="Silent Aim",    desc=IS_EXPLOIT and "FIRE ALL HEADS" or "NEEDS EXECUTOR"},
+    {id="Aimbot",    name="Aimbot",        desc="SMOOTH LOCK — HOLD RMB"},
+    {id="FOVCircle", name="FOV Circle",    desc="WHITE CIRCLE ON SCREEN"},
+    {id="ESP",       name="ESP",           desc="BOXES + TRACERS + HP"},
+    {id="TeamCheck", name="Team Check",    desc="IGNORE TEAMMATES"},
+    {id="WallCheck", name="Wall Check",    desc="LOS ONLY TARGETING"},
+}
+for i,f in ipairs(FEATURES) do BuildToggle(f,i) end
+
+-- Aim bone selector
+local boneRow=New("Frame",{ LayoutOrder=#FEATURES+1, Size=UDim2.new(1,-6,0,42),
+    BackgroundColor3=THEME.Row, BorderSizePixel=0, ZIndex=5 },{Corner(12),Stroke(THEME.Stroke,1)})
+boneRow.Parent=fList
+New("TextLabel",{ Text="Aim Bone", Font=Enum.Font.GothamMedium, TextSize=13, TextColor3=THEME.Text, BackgroundTransparency=1,
+    Position=UDim2.fromOffset(12,5), Size=UDim2.new(0.5,0,0,16), TextXAlignment=Enum.TextXAlignment.Left, ZIndex=6 }).Parent=boneRow
+New("TextLabel",{ Text="HEAD / BODY", Font=Enum.Font.Gotham, TextSize=9, TextColor3=THEME.SubText, BackgroundTransparency=1,
+    Position=UDim2.fromOffset(12,21), Size=UDim2.new(0.5,0,0,14), TextXAlignment=Enum.TextXAlignment.Left, ZIndex=6 }).Parent=boneRow
+local headBtn=New("TextButton",{ Text="HEAD", Font=Enum.Font.GothamMedium, TextSize=11, TextColor3=THEME.Knob, BackgroundColor3=THEME.On,
+    Size=UDim2.fromOffset(50,24), AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-66,0.5,0), AutoButtonColor=false, ZIndex=6 },{Corner(6)})
+headBtn.Parent=boneRow
+local bodyBtn=New("TextButton",{ Text="BODY", Font=Enum.Font.GothamMedium, TextSize=11, TextColor3=THEME.Text, BackgroundColor3=THEME.Off,
+    Size=UDim2.fromOffset(50,24), AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-12,0.5,0), AutoButtonColor=false, ZIndex=6 },{Corner(6)})
+bodyBtn.Parent=boneRow
+local function SelectBone(b)
+    aimBone = b=="Head" and "Head" or "HumanoidRootPart"
+    headBtn.BackgroundColor3 = b=="Head" and THEME.On or THEME.Off
+    headBtn.TextColor3 = b=="Head" and THEME.Knob or THEME.Text
+    bodyBtn.BackgroundColor3 = b=="Body" and THEME.On or THEME.Off
+    bodyBtn.TextColor3 = b=="Body" and THEME.Knob or THEME.Text
+end
+headBtn.MouseButton1Click:Connect(function() SelectBone("Head") end)
+bodyBtn.MouseButton1Click:Connect(function() SelectBone("Body") end)
+
+local function SliderRow(layoutOrder, height)
+    local r=New("Frame",{ LayoutOrder=layoutOrder, Size=UDim2.new(1,-6,0,height), BackgroundColor3=THEME.Row,
+        BorderSizePixel=0, ZIndex=5 },{Corner(12),Stroke(THEME.Stroke,1)})
+    r.Parent=fList; return r
+end
+
+local fovRow=SliderRow(#FEATURES+2, 48)
+MakeSlider(fovRow, 6, "FOV Radius", 10, 500, fovRadius, function(v) fovRadius=v end)
+local smoothRow=SliderRow(#FEATURES+3, 48)
+MakeSlider(smoothRow, 6, "Aimbot Smooth", 1, 100, 25, function(v) aimbotSmooth=v/100 end)
+
+-- profile card
+local aRing=New("Frame",{ AnchorPoint=Vector2.new(0.5,0), Position=UDim2.new(0.5,0,0,16),
+    Size=UDim2.fromOffset(72,72), BackgroundColor3=Color3.fromRGB(10,10,12), BorderSizePixel=0, ZIndex=5 },
+    {Corner(36),Stroke(Color3.fromRGB(190,190,200),2)})
+aRing.Parent=card
+local aImg=New("ImageLabel",{ Size=UDim2.new(1,-6,1,-6), Position=UDim2.fromOffset(3,3),
+    BackgroundTransparency=1, Image="", ZIndex=6 },{Corner(36)})
+aImg.Parent=aRing
+task.spawn(function()
+    local ok,img=pcall(function()
+        return Players:GetUserThumbnailAsync(player.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size150x150)
+    end)
+    if ok and img then aImg.Image=img end
+end)
+New("Frame",{ AnchorPoint=Vector2.new(0.5,0), Position=UDim2.new(0.5,0,0,100),
+    Size=UDim2.new(1,-30,0,1), BackgroundColor3=THEME.Stroke, BorderSizePixel=0, ZIndex=5 }).Parent=card
+local function InfoRow(k,v,y)
+    New("TextLabel",{ Text=k, Font=Enum.Font.Gotham, TextSize=10, TextColor3=THEME.SubText, BackgroundTransparency=1,
+        Position=UDim2.fromOffset(10,y), Size=UDim2.fromOffset(50,16), TextXAlignment=Enum.TextXAlignment.Left, ZIndex=6 }).Parent=card
+    New("TextLabel",{ Text=v, Font=Enum.Font.GothamMedium, TextSize=10, TextColor3=THEME.Text, BackgroundTransparency=1,
+        Position=UDim2.new(0,54,0,y), Size=UDim2.new(1,-64,0,16), TextXAlignment=Enum.TextXAlignment.Right, ZIndex=6 }).Parent=card
+end
+local uid=tostring(player.UserId)
+if #uid>8 then uid=uid:sub(1,8).."…" end
+InfoRow("DISPLAY:",player.DisplayName,114)
+InfoRow("USER ID:",uid,134)
+local accountAge = player.AccountAge or 0
+InfoRow("CREATED:",os.date("%d/%m/%Y",os.time()-accountAge*86400),154)
+
+--------------------------------------------------------------------
+-- MINIMIZE / CLOSE / HOTKEY
+--------------------------------------------------------------------
+local minimized=false
+minBtn.MouseButton1Click:Connect(function()
+    minimized=not minimized
+    contentHost.Visible=not minimized
+    tabsBar.Visible=not minimized
+    Tween(main,0.35,{Size=minimized and UDim2.fromOffset(500,100) or UDim2.fromOffset(500,410)})
+end)
+closeBtn.MouseButton1Click:Connect(function()
+    Tween(uiScale,0.25,{Scale=0.85})
+    task.delay(0.25,function() gui:Destroy() end)
+end)
+UserInputService.InputBegan:Connect(function(inp,proc)
+    if proc then return end
+    if inp.KeyCode==Enum.KeyCode.RightShift then gui.Enabled=not gui.Enabled end
+end)
+
+--------------------------------------------------------------------
+-- TARGET UTILS
+--------------------------------------------------------------------
+local function HasLOS(origin, target)
+    if not Settings:Get("WallCheck") then return true end
+    local params=RaycastParams.new(); params.FilterType=Enum.RaycastFilterType.Exclude
+    local myChar=player.Character
+    if myChar then params.FilterDescendantsInstances={myChar} end
+    local res=Workspace:Raycast(origin,(target-origin)*0.99,params)
+    if not res then return true end
+    return Players:GetPlayerFromCharacter(res.Instance.Parent)~=nil
+end
+
+local function GetClosest(excludeP)
+    local best,bestDist=nil,math.huge
+    local center=Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p==player or p==excludeP then continue end
+        if Settings:Get("TeamCheck") and p.Team==player.Team and p.Team~=nil then continue end
+        local char=p.Character
+        local hum =char and char:FindFirstChildOfClass("Humanoid")
+        local bone=char and char:FindFirstChild(aimBone)
+        if not char or not hum or not bone or hum.Health<=0 then continue end
+        if Settings:Get("WallCheck") and not HasLOS(camera.CFrame.Position,bone.Position) then continue end
+        local scr,on=camera:WorldToViewportPoint(bone.Position)
+        if not on then continue end
+        local dist=(Vector2.new(scr.X,scr.Y)-center).Magnitude
+        if dist<fovRadius and dist<bestDist then bestDist=dist; best=p end
+    end
+    return best
+end
+
+--------------------------------------------------------------------
+-- FOV CIRCLE (ScreenGui version)
+--------------------------------------------------------------------
+local fovGui = New("ScreenGui", {
+    Name = "NoxinFOV", ResetOnSpawn = false, IgnoreGuiInset = true,
+    DisplayOrder = 5, ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+})
+fovGui.Parent = playerGui
+
+local fovCircle = New("Frame", {
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.fromScale(0.5, 0.5),
+    Size = UDim2.fromOffset(fovRadius * 2, fovRadius * 2),
+    BackgroundTransparency = 1,
+    Visible = false,
+    ZIndex = 3,
+}, {
+    New("UICorner", { CornerRadius = UDim.new(1, 0) }),
+    New("UIStroke", { Thickness = 1.5, Color = Color3.fromRGB(255,255,255), Transparency = 0 }),
+})
+fovCircle.Parent = fovGui
+
+local fovStroke = fovCircle:FindFirstChildOfClass("UIStroke")
+OnAccentChanged(function(c) fovStroke.Color = c end)
+
+RunService.RenderStepped:Connect(function()
+    local show = Settings:Get("FOVCircle") or Settings:Get("Aimbot")
+    fovCircle.Visible = show
+    if show then
+        fovCircle.Size = UDim2.fromOffset(fovRadius * 2, fovRadius * 2)
+        fovCircle.Position = UDim2.fromScale(0.5, 0.5)
+    end
+end)
+
+--------------------------------------------------------------------
+-- AIMBOT LOOP
+--------------------------------------------------------------------
+RunService.RenderStepped:Connect(function()
+    if not Settings:Get("Aimbot") then return end
+    if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+    local target=GetClosest(); if not target then return end
+    local char=target.Character
+    local bone=char and char:FindFirstChild(aimBone); if not bone then return end
+    local targetCF = CFrame.new(camera.CFrame.Position, bone.Position)
+    camera.CFrame = camera.CFrame:Lerp(targetCF, aimbotSmooth)
+end)
+
+--------------------------------------------------------------------
+-- SILENT AIM HOOK (only runs in executor)
+--------------------------------------------------------------------
+if IS_EXPLOIT then
+    local headIndex = 1
+    local function GetAllHeads()
+        local heads = {}
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p == player then continue end
+            if Settings:Get("TeamCheck") and p.Team == player.Team and p.Team ~= nil then continue end
+            local char = p.Character
+            local hum  = char and char:FindFirstChildOfClass("Humanoid")
+            local bone = char and char:FindFirstChild(aimBone)
+            if char and hum and hum.Health > 0 and bone then
+                if not Settings:Get("WallCheck") or HasLOS(camera.CFrame.Position, bone.Position) then
+                    table.insert(heads, bone)
+                end
+            end
+        end
+        return heads
+    end
+
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        if Settings:Get("SilentAim") and (method == "FireServer" or method == "InvokeServer") then
+            local heads = GetAllHeads()
+            if #heads > 0 then
+                local target = heads[(headIndex - 1) % #heads + 1]
+                headIndex = headIndex + 1
+                local args = {...}
+                for i, v in ipairs(args) do
+                    if typeof(v) == "Vector3" then
+                        args[i] = target.Position
+                    elseif typeof(v) == "CFrame" then
+                        args[i] = CFrame.new(camera.CFrame.Position, target.Position)
+                    end
+                end
+                return oldNamecall(self, table.unpack(args))
+            end
+        end
+        return oldNamecall(self, ...)
+    end)
+end
+
+--------------------------------------------------------------------
+-- NO RECOIL
+--------------------------------------------------------------------
+local lastPitch=0
+RunService.RenderStepped:Connect(function()
+    local _,pitch,_=camera.CFrame:ToOrientation()
+    if not Settings:Get("NoRecoil") then lastPitch=pitch; return end
+    local drift=pitch-lastPitch
+    if drift>0.0005 then camera.CFrame=camera.CFrame*CFrame.Angles(-drift*0.97,0,0) end
+    lastPitch=select(2,camera.CFrame:ToOrientation())
+end)
+
+--------------------------------------------------------------------
+-- GOD MODE
+--------------------------------------------------------------------
+local function ApplyGod(char)
+    local hum=char:FindFirstChildOfClass("Humanoid"); if not hum then return end
+    hum.MaxHealth=math.huge; hum.Health=math.huge
+    hum.HealthChanged:Connect(function() if Settings:Get("GodMode") then hum.Health=math.huge end end)
+end
+Settings:Connect("GodMode",function(on) if on and player.Character then ApplyGod(player.Character) end end)
+player.CharacterAdded:Connect(function(char) task.wait(0.5); if Settings:Get("GodMode") then ApplyGod(char) end end)
+
+--------------------------------------------------------------------
+-- NOCLIP (FIXED — restores collision on disable)
+--------------------------------------------------------------------
+local noclipConn
+local function StopNoclip()
+    if noclipConn then
+        noclipConn:Disconnect()
+        noclipConn = nil
+    end
+    local char = player.Character
+    if char then
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") and not p.CanCollide then
+                p.CanCollide = true
+            end
+        end
+    end
+end
+
+local function StartNoclip()
+    StopNoclip()
+    noclipConn = RunService.Stepped:Connect(function()
+        if not Settings:Get("Noclip") then
+            StopNoclip()
+            return
+        end
+        local char = player.Character
+        if not char then return end
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") and p.CanCollide then
+                p.CanCollide = false
+            end
+        end
+    end)
+end
+
+Settings:Connect("Noclip", function(on)
+    if on then StartNoclip() else StopNoclip() end
+end)
+
+player.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    if Settings:Get("Noclip") then StartNoclip() else StopNoclip() end
+end)
+
+--------------------------------------------------------------------
+-- ESP (FIXED — uses math.atan because Roblox has no math.atan2)
+--------------------------------------------------------------------
+local espGui = New("ScreenGui", {
+    Name = "NoxinESP", ResetOnSpawn = false, IgnoreGuiInset = true,
+    DisplayOrder = 4, ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+})
+espGui.Parent = playerGui
+
+local espObjs = {}
+
+local function CreateESPEntry()
+    local box = New("Frame", {
+        BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, ZIndex = 2,
+    }, { New("UIStroke", { Thickness = 1.5, Color = Color3.fromRGB(255,255,255) }) })
+
+    local nameLbl = New("TextLabel", {
+        BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 13,
+        TextColor3 = Color3.fromRGB(255,255,255), TextStrokeTransparency = 0,
+        TextStrokeColor3 = Color3.fromRGB(0,0,0), Visible = false,
+        Size = UDim2.fromOffset(200, 16), AnchorPoint = Vector2.new(0.5, 1), ZIndex = 3,
+    })
+
+    local hpLbl = New("TextLabel", {
+        BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 11,
+        TextColor3 = Color3.fromRGB(255,255,255), TextStrokeTransparency = 0,
+        TextStrokeColor3 = Color3.fromRGB(0,0,0), Visible = false,
+        Size = UDim2.fromOffset(120, 14), AnchorPoint = Vector2.new(0.5, 0), ZIndex = 3,
+    })
+
+    local tracer = New("Frame", {
+        BackgroundColor3 = Color3.fromRGB(255,255,255), BorderSizePixel = 0,
+        Visible = false, ZIndex = 2,
+        AnchorPoint = Vector2.new(0.5, 0.5), Rotation = 0,
+    })
+
+    box.Parent = espGui
+    nameLbl.Parent = espGui
+    hpLbl.Parent = espGui
+    tracer.Parent = espGui
+
+    return { box = box, name = nameLbl, hp = hpLbl, tracer = tracer }
+end
+
+local function GetESP(p)
+    if not espObjs[p] then
+        espObjs[p] = CreateESPEntry()
+    end
+    return espObjs[p]
+end
+
+Players.PlayerRemoving:Connect(function(p)
+    if espObjs[p] then
+        for _, obj in pairs(espObjs[p]) do obj:Destroy() end
+        espObjs[p] = nil
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    local on = Settings:Get("ESP")
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p == player then continue end
+        local e = GetESP(p)
+        local char = p.Character
+        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local head = char and char:FindFirstChild("Head")
+
+        local hide = (not on) or (not char) or (not hum) or (not root) or (not head)
+            or hum.Health <= 0
+            or (Settings:Get("TeamCheck") and p.Team == player.Team and p.Team ~= nil)
+
+        if hide then
+            e.box.Visible = false; e.name.Visible = false
+            e.hp.Visible = false; e.tracer.Visible = false
+            continue
+        end
+
+        local hScr, hOn = camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1.5, 0))
+        local fScr = camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
+
+        if not hOn then
+            e.box.Visible = false; e.name.Visible = false
+            e.hp.Visible = false; e.tracer.Visible = false
+            continue
+        end
+
+        local bH = math.abs(hScr.Y - fScr.Y)
+        local bW = bH * 0.55
+
+        e.box.Visible  = true
+        e.box.Size     = UDim2.fromOffset(bW, bH)
+        e.box.Position = UDim2.fromOffset(hScr.X - bW/2, hScr.Y)
+
+        e.name.Visible  = true
+        e.name.Text     = p.DisplayName
+        e.name.Position = UDim2.fromOffset(hScr.X, hScr.Y - 2)
+
+        e.hp.Visible  = true
+        e.hp.Text     = math.floor(hum.Health) .. " HP"
+        e.hp.Position = UDim2.fromOffset(hScr.X, fScr.Y + 2)
+
+        -- Tracer line — FIXED: math.atan (not math.atan2)
+        local fromX = camera.ViewportSize.X / 2
+        local fromY = camera.ViewportSize.Y
+        local dx = hScr.X - fromX
+        local dy = hScr.Y - fromY
+        local len = math.sqrt(dx*dx + dy*dy)
+        local angle = math.deg(math.atan(dy, dx))
+
+        e.tracer.Visible  = true
+        e.tracer.Size     = UDim2.fromOffset(len, 1)
+        e.tracer.Position = UDim2.fromOffset((fromX + hScr.X)/2, (fromY + hScr.Y)/2)
+        e.tracer.Rotation = angle
+    end
+end)
+
+--------------------------------------------------------------------
+-- FLY
+--------------------------------------------------------------------
+local flyGui=New("ScreenGui",{ Name="FlyPanel", ResetOnSpawn=false, IgnoreGuiInset=true, ZIndexBehavior=Enum.ZIndexBehavior.Sibling })
+flyGui.Parent=playerGui
+local flyPanel=New("Frame",{ Size=UDim2.fromOffset(230,200), Position=UDim2.fromOffset(30,200),
+    BackgroundColor3=THEME.Background, Visible=false },{Corner(16),Stroke(THEME.Stroke,2)})
+flyPanel.Parent=flyGui
+local flyHdr=New("Frame",{Size=UDim2.new(1,0,0,40),BackgroundTransparency=1}); flyHdr.Parent=flyPanel
+New("TextLabel",{ Text="✈  FLY PANEL", Font=Enum.Font.GothamBold, TextSize=13, TextColor3=THEME.Text,
+    BackgroundTransparency=1, Position=UDim2.fromOffset(12,0), Size=UDim2.new(1,-46,1,0),
+    TextXAlignment=Enum.TextXAlignment.Left }).Parent=flyHdr
+local flyClose=New("TextButton",{ Text="✕", Font=Enum.Font.GothamBold, TextSize=12, TextColor3=THEME.Text,
+    BackgroundColor3=THEME.Row, AutoButtonColor=false, Size=UDim2.fromOffset(24,24),
+    AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-10,0.5,0) },{Corner(6),Stroke(THEME.Stroke,1)})
+flyClose.Parent=flyHdr
+flyClose.MouseButton1Click:Connect(function() Settings:Set("Fly",false); ToggleRefs["Fly"].SetState(false); flyPanel.Visible=false end)
+MakeDraggable(flyPanel, flyHdr)
+MakeSlider(flyPanel, 48, "Speed", 5, 300, flySpeed, function(v) flySpeed=v end)
+
+local flyBV, flyBAV, flyConn
+local function EnableFly()
+    local char=player.Character
+    local root=char and char:FindFirstChild("HumanoidRootPart")
+    local hum =char and char:FindFirstChildOfClass("Humanoid")
+    if not char or not root or not hum then return end
+    hum.PlatformStand=true
+    flyBV=Instance.new("BodyVelocity"); flyBV.MaxForce=Vector3.new(1e5,1e5,1e5); flyBV.Velocity=Vector3.zero; flyBV.Parent=root
+    flyBAV=Instance.new("BodyAngularVelocity"); flyBAV.MaxTorque=Vector3.new(1e5,1e5,1e5); flyBAV.AngularVelocity=Vector3.zero; flyBAV.Parent=root
+    if flyConn then flyConn:Disconnect() end
+    flyConn=RunService.RenderStepped:Connect(function()
+        if not Settings:Get("Fly") then return end
+        local cf=camera.CFrame; local vel=Vector3.zero
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then vel=vel+cf.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then vel=vel-cf.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then vel=vel-cf.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then vel=vel+cf.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vel=vel+Vector3.new(0,1,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then vel=vel-Vector3.new(0,1,0) end
+        flyBV.Velocity=vel.Magnitude>0 and vel.Unit*flySpeed or Vector3.zero
+        root.CFrame=CFrame.new(root.Position,root.Position+cf.LookVector)
+    end)
+end
+local function DisableFly()
+    if flyConn then flyConn:Disconnect(); flyConn=nil end
+    if flyBV then flyBV:Destroy(); flyBV=nil end
+    if flyBAV then flyBAV:Destroy(); flyBAV=nil end
+    local char=player.Character
+    local hum =char and char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.PlatformStand=false end
+end
+Settings:Connect("Fly", function(on)
+    flyPanel.Visible = on
+    if on then EnableFly() else DisableFly() end
+end)
+player.CharacterAdded:Connect(function() task.wait(1); if Settings:Get("Fly") then EnableFly() end end)
+
+print("[JOSH / KIE OWN THIS] loaded — RShift toggles UI")
+print("Executor detected:", IS_EXPLOIT and "YES (Silent Aim enabled)" or "NO (Silent Aim disabled)")
+print("Key required: JOSH / KIE")
